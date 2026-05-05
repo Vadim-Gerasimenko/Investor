@@ -1,0 +1,65 @@
+investor-core:
+  dev-mode: true
+  system-user-email: ${SYSTEM_USER_EMAIL}
+  t-bank-api:
+    base-url: https://invest-public-api.tbank.ru/rest
+    contract-version: tinkoff.public.invest.api.contract.v1
+    instruments-service-name: InstrumentsService
+    market-data-service-name: MarketDataService
+    operations-service-name: OperationsService
+    users-service-name: UsersService
+    sandbox-service-name: SandboxService
+  synchronization:
+    instruments-sync-fixed-delay: 1h
+    instruments-prices-fixed-delay: 1h
+    dictionary-refresh-fixed-delay: 1h
+    account-sync-max-delay: 2m
+
+scheduler:
+  pool-size: 10
+  termination-seconds: 60
+  async-pool-size: 5
+  thread-name-prefix: "data-sync-thread-"
+  async-thread-name-prefix: "async-worker-"
+
+server:
+  port: 9095
+
+logging:
+  file:
+    name: distr/conf/logback.xml
+  level:
+    ru.nstu.bachelor: info
+
+spring:
+  main:
+    banner-mode: off
+  application:
+    name: InvestorCore
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    enabled: true
+    change-log: db/changelog/changelog.xml
+    default-schema: tbank
+    liquibase-schema: liquibase
+    parameters:
+      SYSTEM_USER_EMAIL: ${SYSTEM_USER_EMAIL}
+      SYSTEM_USER_PASSWORD: ${SYSTEM_USER_PASSWORD}
+      TBANK_SYSTEM_TOKEN: ${TBANK_SYSTEM_TOKEN}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+    access-token-expiration: 36000000 # 10 hours
+    refresh-token-expiration: 252000000 # 7 days
