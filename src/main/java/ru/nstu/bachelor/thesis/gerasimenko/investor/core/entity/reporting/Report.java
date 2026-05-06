@@ -15,4 +15,5 @@ public class Report {
     private List<TradeGroup> closedTrades;
     private List<TradeGroup> openTrades;
     private Summary summary;
+    private FinancialSummary financialSummary;
 }

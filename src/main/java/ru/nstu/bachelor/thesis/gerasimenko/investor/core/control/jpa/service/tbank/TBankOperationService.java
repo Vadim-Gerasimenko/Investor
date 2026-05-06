@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.repo.tbank.TBankOperationRepository;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.dictionary.OperationType;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankAccount;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankInstrument;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankOperation;
@@ -31,5 +32,9 @@ public class TBankOperationService {
 
     public List<TBankOperation> findAccountOperationsByInstrument(TBankAccount account, TBankInstrument instrument) {
         return tBankOperationRepository.findAccountOperationsByInstrument(account, instrument);
+    }
+
+    public List<TBankOperation> findAccountOperations(TBankAccount account) {
+        return tBankOperationRepository.findAllByAccount(account);
     }
 }

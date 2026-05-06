@@ -1,6 +1,5 @@
 package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.api;
 
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +33,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.constant.PRECIOUS_METAL.PRECIOUS_METALS_FIGI;
+import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.constant.PreciousMetals.PRECIOUS_METALS_FIGI;
 import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.MainApiMethod.*;
 import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.account.AccountAccessLevel.ACCOUNT_ACCESS_LEVEL_FULL_ACCESS;
 import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.account.AccountAccessLevel.ACCOUNT_ACCESS_LEVEL_READ_ONLY;

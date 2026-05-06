@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.dictionary.OperationType;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankAccount;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankInstrument;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankOperation;
@@ -28,4 +29,6 @@ public interface TBankOperationRepository extends JpaRepository<TBankOperation, 
             """)
     List<TBankOperation> findAccountOperationsByInstrument(@Param("account") TBankAccount account,
                                                            @Param("instrument") TBankInstrument instrument);
+
+    List<TBankOperation> findAllByAccount(TBankAccount account);
 }

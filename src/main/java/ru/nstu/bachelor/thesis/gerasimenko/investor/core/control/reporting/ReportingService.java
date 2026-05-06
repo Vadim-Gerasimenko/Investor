@@ -6,12 +6,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.converter.TBankInstrumentConverter;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.converter.TBankOperationConverter;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.exception.InvestorCoreException;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.tbank.TBankAccountService;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.tbank.TBankInstrumentPriceService;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.tbank.TBankOperationService;
-import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.reporting.Report;
-import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.reporting.Summary;
-import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.reporting.TradeGroup;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.tbank.TBankUserTariffService;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.dto.tbank.OperationDto;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.operation.InstrumentType;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.dictionary.InstrumentFee;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.reporting.*;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankAccount;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankInstrument;
@@ -21,9 +24,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static java.util.Arrays.stream;
+import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.constant.TBankEtf.ETF_WITHOUT_FEE_TICKERS;
+import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.converter.MoneyValueConverter.*;
 import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.operation.OperationState.OPERATION_STATE_EXECUTED;
-import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.operation.OperationType.OPERATION_TYPE_BUY;
-import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.operation.OperationType.OPERATION_TYPE_SELL;
+import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.operation.OperationType.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,10 +37,15 @@ public class ReportingService {
 
     private final TBankOperationService tBankOperationService;
     private final TBankAccountService tBankAccountService;
+    private final TBankUserTariffService tBankUserTariffService;
 
     private final TBankInstrumentPriceService tBankInstrumentPriceService;
 
     private final ExcelReportGenerator excelReportGenerator;
+
+    private static final String FEE = "FEE";
+    private static final String TAX = "TAX";
+    private static final long TAX_PERCENTAGE_NANO = 13 * ONE_TO_NANO;
 
     @Transactional(readOnly = true)
     public byte[] getExcelReport(User user) {
@@ -48,21 +58,26 @@ public class ReportingService {
         log.info("to get report: userId=[{}]", user.getId());
         TBankAccount account = tBankAccountService.findActiveAccount(user);
         List<TBankInstrument> instruments = tBankOperationService.findAccountInstruments(account);
+        List<InstrumentFee> instrumentFees = tBankUserTariffService.getUserTariff(user).getInstrumentFees();
 
         List<TradeGroup> closedTrades = new ArrayList<>();
         List<TradeGroup> openTrades = new ArrayList<>();
 
         for (TBankInstrument instrument : instruments) {
             List<TBankOperation> operations = tBankOperationService.findAccountOperationsByInstrument(account, instrument);
-
             if (operations.isEmpty()) {
                 continue;
             }
 
+            InstrumentFee instrumentFee = instrumentFees.stream()
+                    .filter(fee -> fee.getInstrumentType().equals(instrument.getInstrumentType()))
+                    .findFirst().orElseThrow(() -> new InvestorCoreException(String.format(
+                            "Instrument fee not found: instrumentType=[%s]", instrument.getInstrumentType().getType())));
+
             List<List<TBankOperation>> tradeGroups = groupByFifo(operations);
 
             for (List<TBankOperation> group : tradeGroups) {
-                TradeGroup tradeGroup = buildTradeGroup(group, instrument);
+                TradeGroup tradeGroup = buildTradeGroup(group, instrument, instrumentFee);
 
                 if (tradeGroup.getRemainingQuantity() == 0) {
                     closedTrades.add(tradeGroup);
@@ -72,11 +87,14 @@ public class ReportingService {
             }
         }
 
+        List<TBankOperation> operations = tBankOperationService.findAccountOperations(account);
+        FinancialSummary financialSummary = buildFinancialSummary(operations, closedTrades, openTrades);
+
         log.info("from get report: userId=[{}]", user.getId());
         return Report.builder()
                 .closedTrades(closedTrades)
                 .openTrades(openTrades)
-                .summary(calculateSummary(closedTrades, openTrades))
+                .financialSummary(financialSummary)
                 .build();
     }
 
@@ -126,11 +144,16 @@ public class ReportingService {
         return groups;
     }
 
-    private TradeGroup buildTradeGroup(List<TBankOperation> operations, TBankInstrument instrument) {
+    private TradeGroup buildTradeGroup(List<TBankOperation> operations, TBankInstrument instrument, InstrumentFee instrumentFee) {
         long totalBuyQuantity = 0;
         long totalSellQuantity = 0;
-        long totalBuyValue = 0;
-        long totalSellValue = 0;
+
+        BigDecimal totalBuyValue = BigDecimal.ZERO;
+        BigDecimal totalSellValue = BigDecimal.ZERO;
+        BigDecimal accruedFees = BigDecimal.ZERO;
+        BigDecimal accruedTaxes = BigDecimal.ZERO;
+        BigDecimal passiveIncomeBeforeTax = BigDecimal.ZERO;
+
         Map<String, Long> otherOperationsSum = new HashMap<>();
 
         LocalDateTime openedAt = null;
@@ -149,62 +172,114 @@ public class ReportingService {
 
             if (OPERATION_TYPE_BUY.getType().equals(op.getOperationType().getType())) {
                 totalBuyQuantity += quantity;
-                totalBuyValue -= op.getPaymentValue();
+                totalBuyValue = totalBuyValue.add(convert(-op.getPaymentValue()));
             } else if (OPERATION_TYPE_SELL.getType().equals(op.getOperationType().getType())) {
                 totalSellQuantity += quantity;
-                totalSellValue += op.getPaymentValue();
+                totalSellValue = totalSellValue.add(convert(op.getPaymentValue()));
+            } else if (OPERATION_TYPE_DIVIDEND.getType().equals(op.getOperationType().getType()) ||
+                    OPERATION_TYPE_COUPON.getType().equals(op.getOperationType().getType())) {
+                passiveIncomeBeforeTax = passiveIncomeBeforeTax.add(convert(op.getPaymentValue()));
+            } else if (op.getOperationType().getType().contains(FEE)) {
+                accruedFees = accruedFees.add(convert(-op.getPaymentValue()));
+            } else if (op.getOperationType().getType().contains(TAX)) {
+                accruedTaxes = accruedTaxes.add(convert(-op.getPaymentValue()));
             } else {
-                otherOperationsSum.merge(op.getOperationType().getType(), op.getPaymentValue(), Long::sum);
+                otherOperationsSum.put(op.getOperationType().getType(), quantity);
             }
         }
 
         long remainingQuantity = totalBuyQuantity - totalSellQuantity;
-        long profitLoss = totalSellValue - totalBuyValue;
-        long avgBuyPrice = totalBuyQuantity > 0 ? totalBuyValue / totalBuyQuantity : 0;
-        long avgSellPrice = totalSellQuantity > 0 ? totalSellValue / totalSellQuantity : 0;
+        BigDecimal avgBuyPrice = totalBuyQuantity > 0 ? getAverage(totalBuyValue, totalBuyQuantity) : BigDecimal.ZERO;
+        BigDecimal avgSellPrice = totalSellQuantity > 0 ? getAverage(totalSellValue, totalSellQuantity) : BigDecimal.ZERO;
+
+        BigDecimal currentPrice = convert(tBankInstrumentPriceService.getCurrentPrice(instrument.getUid()));
+        BigDecimal currentAmount = getTotal(currentPrice, remainingQuantity);
+
+        BigDecimal potentialFees = getPercent(currentAmount, instrumentFee.getPercentNano());
+
+        if (instrument.getInstrumentType().getType().equals(InstrumentType.ETF.getType()) &&
+                ETF_WITHOUT_FEE_TICKERS.contains(instrument.getTicker())) {
+            potentialFees = BigDecimal.ZERO;
+        }
+
+        BigDecimal profitFromSpeculationBeforeTax = totalSellValue.add(getTotal(currentPrice, remainingQuantity))
+                .subtract(totalBuyValue)
+                .subtract(accruedFees)
+                .subtract(potentialFees);
+
+        BigDecimal taxAdjustment = getPercent(profitFromSpeculationBeforeTax, TAX_PERCENTAGE_NANO);
+
+        BigDecimal profitFromSpeculation = profitFromSpeculationBeforeTax
+                .subtract(taxAdjustment.compareTo(BigDecimal.ZERO) > 0 ? taxAdjustment : BigDecimal.ZERO);
+        BigDecimal finalProfit = profitFromSpeculation.add(passiveIncomeBeforeTax.subtract(accruedTaxes));
 
         return TradeGroup.builder()
                 .instrument(TBankInstrumentConverter.convert(instrument))
                 .operations(operations.stream().map(TBankOperationConverter::convert).toList())
-                .currentPrice(tBankInstrumentPriceService.getCurrentPrice(instrument.getUid()))
+                .currentPrice(currentPrice)
+                .currentAmount(getTotal(currentPrice, remainingQuantity))
+                .totalBuyValue(totalBuyValue)
+                .totalSellValue(totalSellValue)
                 .totalBuyQuantity(totalBuyQuantity)
                 .totalSellQuantity(totalSellQuantity)
-                .remainingQuantity(Math.max(remainingQuantity, 0))
-                .profitLoss(profitLoss)
+                .remainingQuantity(remainingQuantity)
+                .passiveIncomeBeforeTax(passiveIncomeBeforeTax)
                 .avgBuyPrice(avgBuyPrice)
                 .avgSellPrice(avgSellPrice)
-                .otherOperationsSum(otherOperationsSum)
+                .otherOperationsSumNano(otherOperationsSum)
+                .accruedFees(accruedFees)
+                .accruedTaxes(accruedTaxes)
+                .profitFromSpeculationBeforeTax(profitFromSpeculationBeforeTax)
+                .taxAdjustment(taxAdjustment)
+                .potentialFees(potentialFees)
+                .profitFromSpeculation(profitFromSpeculation)
+                .finalProfit(finalProfit)
                 .openedAt(openedAt)
                 .closedAt(remainingQuantity == 0 ? closedAt : null)
                 .build();
     }
 
-    private Summary calculateSummary(List<TradeGroup> closedTrades, List<TradeGroup> openTrades) {
-        long totalProfit = closedTrades.stream()
-                .mapToLong(TradeGroup::getProfitLoss)
-                .sum();
+    private FinancialSummary buildFinancialSummary(List<TBankOperation> operations,
+                                                   List<TradeGroup> closedTrades,
+                                                   List<TradeGroup> openTrades) {
+        List<TBankOperation> executedOperations = operations.stream()
+                .filter(op -> op.getState().getState().equals(OPERATION_STATE_EXECUTED.getState()))
+                .toList();
 
-        long totalInvested = closedTrades.stream()
-                .mapToLong(TradeGroup::getTotalBuyValue)
-                .sum();
+        List<OperationDto> inputOperations = executedOperations.stream()
+                .filter(op -> op.getOperationType().getType().equals(OPERATION_TYPE_INPUT.getType()))
+                .map(TBankOperationConverter::convert)
+                .toList();
+        List<OperationDto> outputOperations = executedOperations.stream()
+                .filter(op -> op.getOperationType().getType().equals(OPERATION_TYPE_OUTPUT.getType()))
+                .map(TBankOperationConverter::convert)
+                .toList();
 
-        long currentValue = openTrades.stream()
-                .mapToLong(tg -> {
-                    long currentPrice = tBankInstrumentPriceService.getCurrentPrice(tg.getInstrument().uid());
-                    return tg.getRemainingQuantity() * currentPrice;
-                })
-                .sum();
+        BigDecimal balance = convert(executedOperations.stream()
+                .mapToLong(TBankOperation::getPaymentValue)
+                .sum());
 
-        long totalValue = totalInvested + totalProfit + currentValue;
-        BigDecimal returnPercent = totalInvested > 0
-                ? BigDecimal.valueOf((double) (totalProfit + currentValue) / totalInvested * 100)
-                : BigDecimal.ZERO;
+        BigDecimal portfolioAmount = openTrades.stream()
+                .map(TradeGroup::getCurrentAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return Summary.builder()
-                .totalProfit(totalProfit)
-                .totalInvested(totalInvested)
-                .currentValue(currentValue)
-                .totalReturnPercent(returnPercent)
+        BigDecimal potentialFees = openTrades.stream()
+                .map(TradeGroup::getPotentialFees)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal potentialTaxes = openTrades.stream()
+                .map(TradeGroup::getTaxAdjustment)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+
+        //BigDecimal potentialAmountClear = portfolioAmount.subtract(potentialFees).subtract(potentialTaxes.compareTo(BigDecimal.ZERO) > 0 ? potentialTaxes : BigDecimal.ZERO);
+        //BigDecimal potentialProfitWithoutTaxes = potentialAmountClear.subtract(po)
+
+        return FinancialSummary.builder()
+                .currentCashBalance(balance)
+                .inputOperations(inputOperations)
+                .outputOperations(outputOperations)
                 .build();
     }
+
 }

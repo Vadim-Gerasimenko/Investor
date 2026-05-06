@@ -15,7 +15,7 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.reporting.Report;
 
 import java.time.LocalDateTime;
-import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.reporting.ExcelReportGenerator.DATE_FORMATTER;
+import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @RestController
@@ -27,6 +27,8 @@ public class TBankController {
     private final TBankAccountService tBankAccountService;
     private final TBankApiService tBankApiService;
     private final ReportingService reportingService;
+
+    public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss");
 
     @PostMapping("/token")
     public void addToken(@AuthenticationPrincipal User user, @RequestBody TBankTokenDto tokenDto) {
