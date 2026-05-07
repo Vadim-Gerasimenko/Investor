@@ -13,13 +13,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.converter.MoneyValueConverter.convert;
-import static ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.enums.tbank.operation.OperationType.OPERATION_TYPE_BROKER_FEE;
 
 
 @Slf4j
@@ -40,10 +37,8 @@ public class ExcelReportGenerator {
             "Выплаты дивидендов/купонов, руб",
             "Налог, удержанный брокером, руб",
             "Комиссия, удержанная брокером, руб",
-            "Прибыль от трейдинга до НДФЛ, руб",
-            "Корректировка НДФЛ, руб",
-            "Прибыль от трейдинга, руб",
-            "Итоговая прибыль, руб",
+            "Доход от трейдинга (до НДФЛ), руб",
+            "Прибыль от дивидендов/купонов, руб",
             "Дата открытия",
             "Дата закрытия"
     };
@@ -62,14 +57,14 @@ public class ExcelReportGenerator {
             "Налог, удержанный брокером, руб",
             "Комиссия, удержанная брокером, руб",
             "Прогнозируемая комиссия брокера, руб",
-            "Прогнозируемая прибыль от трейдинга до НДФЛ, руб",
-            "Корректировка НДФЛ, руб",
-            "Прогнозируемая прибыль от трейдинга, руб",
-            "Итоговая прибыль, руб",
+            "Прогнозируемый доход от трейдинга (до НДФЛ), руб",
+            "Прибыль от дивидендов/купонов, руб",
             "Дата открытия"
     };
 
-    public static final String[] OPERATION_HEADERS = new String[]{"Дата", "Тип операции", "Количество", "Цена (руб)", "Сумма (руб)"};
+    public static final String[] OPERATION_HEADERS = new String[]{"Дата", "Тип операции", "Количество", "Цена, руб", "Сумма, руб"};
+
+    public static final String[] BALANCE_OPERATION_HEADERS = new String[]{"Дата", "Сумма, руб"};
 
     public byte[] generateExcelReport(Report report) {
         log.info("to generate excel report");
@@ -85,7 +80,7 @@ public class ExcelReportGenerator {
                 createDetailedTradesSheet(workbook, report.getOpenTrades(), "Открытые позиции", false);
             }
 
-            createAllOperationsByInstrumentTypeSheet(workbook, report);
+            createBalanceSheet(workbook, report);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
@@ -113,13 +108,13 @@ public class ExcelReportGenerator {
             Cell typeCell = typeRow.createCell(0);
             typeCell.setCellValue(instrumentType);
             typeCell.setCellStyle(createTypeHeaderStyle(workbook));
-            int lastColumn = isClosed ? CLOSED_TRADES_HEADERS.length -1 : OPEN_TRADES_HEADERS.length -1;
+            int lastColumn = isClosed ? CLOSED_TRADES_HEADERS.length - 1 : OPEN_TRADES_HEADERS.length - 1;
             sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, lastColumn));
 
             for (TradeGroup trade : entry.getValue()) {
                 Row headerRow = sheet.createRow(rowNum++);
                 createHeaderRow(headerRow, isClosed ? CLOSED_TRADES_HEADERS : OPEN_TRADES_HEADERS);
-                CellStyle headerStyle = createTradeGroupHeaderStyle(workbook);
+                CellStyle headerStyle = createSecondHeaderStyle(workbook);
                 applyHeaderStyle(headerRow, headerStyle);
 
                 rowNum = createTradeGroup(workbook, sheet, rowNum, trade, isClosed);
@@ -134,66 +129,66 @@ public class ExcelReportGenerator {
         }
     }
 
-    private void createAllOperationsByInstrumentTypeSheet(Workbook workbook, Report report) {
-        List<TradeGroup> allTrades = new ArrayList<>();
+    private void createBalanceSheet(Workbook workbook, Report report) {
+        Sheet sheet = workbook.createSheet("Операции с балансом");
 
-        if (report.getClosedTrades() != null) {
-            allTrades.addAll(report.getClosedTrades());
-        }
-
-        if (report.getOpenTrades() != null) {
-            allTrades.addAll(report.getOpenTrades());
-        }
-
-        Map<String, List<TradeGroup>> groupedByType = allTrades.stream()
-                .collect(Collectors.groupingBy(t -> t.getInstrument().type()));
-
-        Sheet sheet = workbook.createSheet("Все операции по инструментам");
         int rowNum = 0;
 
-        for (Map.Entry<String, List<TradeGroup>> entry : groupedByType.entrySet()) {
-            String instrumentType = entry.getKey();
+        int blockStartRow = rowNum;
+        Row balanceHeader = sheet.createRow(rowNum++);
+        balanceHeader.createCell(0).setCellValue("Операции с балансом");
+        balanceHeader.getCell(0).setCellStyle(createTypeHeaderStyle(workbook));
+        sheet.addMergedRegion(new CellRangeAddress(blockStartRow, blockStartRow, 0, BALANCE_OPERATION_HEADERS.length - 1));
 
-            Row typeRow = sheet.createRow(rowNum++);
-            Cell typeCell = typeRow.createCell(0);
-            typeCell.setCellValue(instrumentType);
-            typeCell.setCellStyle(createTypeHeaderStyle(workbook));
-            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 12));
+        List<OperationDto> inputOperations = new ArrayList<>(report.getFinancialSummary().getInputOperations());
+        inputOperations.sort(Comparator.comparing(OperationDto::date));
 
-            for (TradeGroup trade : entry.getValue()) {
-                Row instrumentRow = sheet.createRow(rowNum++);
-                Cell instrumentCell = instrumentRow.createCell(0);
-                instrumentCell.setCellValue(String.format("%s (%s)",
-                        trade.getInstrument().name(),
-                        trade.getInstrument().ticker() != null ? trade.getInstrument().ticker() : ""));
-                instrumentCell.setCellStyle(createInstrumentHeaderStyle(workbook));
-                sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 12));
+        List<OperationDto> outputOperations = new ArrayList<>(report.getFinancialSummary().getOutputOperations());
+        outputOperations.sort(Comparator.comparing(OperationDto::date));
 
-                Row opHeaderRow = sheet.createRow(rowNum++);
-
-                for (int i = 0; i < OPERATION_HEADERS.length; i++) {
-                    Cell cell = opHeaderRow.createCell(i);
-                    cell.setCellValue(OPERATION_HEADERS[i]);
-                    cell.setCellStyle(createHeaderStyle(workbook));
-                }
-
-                for (OperationDto op : trade.getOperations()) {
-                    Row opRow = sheet.createRow(rowNum++);
-
-                    opRow.createCell(0).setCellValue(formatDateTime(op.date()));
-                    opRow.createCell(1).setCellValue(op.operationType());
-                    opRow.createCell(2).setCellValue(op.quantity());
-                    opRow.createCell(3).setCellValue(convert(getPriceFromOperation(op)).doubleValue());
-                    opRow.createCell(4).setCellValue(convert(Math.abs(op.payment())).doubleValue());
-                }
-
-                rowNum++;
-            }
+        if (!inputOperations.isEmpty()) {
+            rowNum = createBalanceOperationBlock(sheet, rowNum, inputOperations, inputOperations.getFirst().operationType());
         }
 
-        for (int i = 0; i < 13; i++) {
+        if (!outputOperations.isEmpty()) {
+            rowNum = createBalanceOperationBlock(sheet, rowNum, outputOperations, outputOperations.getFirst().operationType());
+        }
+
+        for (int i = 0; i < BALANCE_OPERATION_HEADERS.length; i++) {
             sheet.autoSizeColumn(i);
         }
+
+        sheet.setColumnWidth(1, 5000);
+    }
+
+    private int createBalanceOperationBlock(Sheet sheet, int rowNum, List<OperationDto> operations, String blockTitle) {
+        int blockStartRow = rowNum;
+        Workbook workbook = sheet.getWorkbook();
+
+        Row headerRow = sheet.createRow(rowNum++);
+        Cell headerCell = headerRow.createCell(0);
+        headerCell.setCellValue(blockTitle);
+        CellStyle headerStyle = createSecondHeaderStyle(sheet.getWorkbook());
+        headerCell.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(blockStartRow, blockStartRow, 0, BALANCE_OPERATION_HEADERS.length - 1));
+
+        Row opHeaderRow = sheet.createRow(rowNum++);
+        for (int i = 0; i < BALANCE_OPERATION_HEADERS.length; i++) {
+            Cell cell = opHeaderRow.createCell(i);
+            cell.setCellValue(BALANCE_OPERATION_HEADERS[i]);
+            cell.setCellStyle(createHeaderStyle(sheet.getWorkbook()));
+        }
+
+        for (OperationDto op : operations) {
+            Row opRow = sheet.createRow(rowNum++);
+            opRow.createCell(0).setCellValue(formatDateTime(op.date()));
+            opRow.createCell(1).setCellValue(convert(Math.abs(op.payment())).doubleValue());
+        }
+
+        int blockEndRow = rowNum - 1;
+        drawBorderAroundBlock(sheet, blockStartRow, blockEndRow, 0, BALANCE_OPERATION_HEADERS.length - 1, workbook);
+        rowNum++;
+        return rowNum;
     }
 
     private int createTradeGroup(Workbook workbook, Sheet sheet, int rowNum, TradeGroup trade, boolean isClosed) {
@@ -215,11 +210,9 @@ public class ExcelReportGenerator {
             row.createCell(8).setCellValue(trade.getAccruedTaxes().doubleValue());
             row.createCell(9).setCellValue(trade.getAccruedFees().doubleValue());
             row.createCell(10).setCellValue(trade.getProfitFromSpeculationBeforeTax().doubleValue());
-            row.createCell(11).setCellValue(trade.getTaxAdjustment().doubleValue());
-            row.createCell(12).setCellValue(trade.getProfitFromSpeculation().doubleValue());
-            row.createCell(13).setCellValue(trade.getFinalProfit().doubleValue());
-            row.createCell(14).setCellValue(formatDateTime(trade.getOpenedAt()));
-            row.createCell(15).setCellValue(formatDateTime(trade.getClosedAt()));
+            row.createCell(11).setCellValue(trade.getPassiveIncome().doubleValue());
+            row.createCell(12).setCellValue(formatDateTime(trade.getOpenedAt()));
+            row.createCell(13).setCellValue(formatDateTime(trade.getClosedAt()));
         } else {
             row.createCell(2).setCellValue(trade.getRemainingQuantity());
             row.createCell(3).setCellValue(trade.getCurrentAmount().doubleValue());
@@ -233,19 +226,16 @@ public class ExcelReportGenerator {
             row.createCell(11).setCellValue(trade.getAccruedFees().doubleValue());
             row.createCell(12).setCellValue(trade.getPotentialFees().doubleValue());
             row.createCell(13).setCellValue(trade.getProfitFromSpeculationBeforeTax().doubleValue());
-            row.createCell(14).setCellValue(trade.getTaxAdjustment().doubleValue());
-            row.createCell(15).setCellValue(trade.getProfitFromSpeculation().doubleValue());
-            row.createCell(16).setCellValue(trade.getFinalProfit().doubleValue());
-            row.createCell(17).setCellValue(formatDateTime(trade.getOpenedAt()));
+            row.createCell(14).setCellValue(trade.getPassiveIncome().doubleValue());
+            row.createCell(15).setCellValue(formatDateTime(trade.getOpenedAt()));
         }
 
         drawBorderForInstrumentRow(sheet, startRow + 1, 0, lastColumn, workbook);
 
         Row opHeaderRow = sheet.createRow(rowNum++);
-        String[] opHeaders = {"Дата", "Тип операции", "Количество", "Цена (руб)", "Сумма (руб)"};
-        for (int i = 0; i < opHeaders.length; i++) {
+        for (int i = 0; i < OPERATION_HEADERS.length; i++) {
             Cell cell = opHeaderRow.createCell(i);
-            cell.setCellValue(opHeaders[i]);
+            cell.setCellValue(OPERATION_HEADERS[i]);
             cell.setCellStyle(createHeaderStyle(workbook));
         }
 
@@ -253,7 +243,7 @@ public class ExcelReportGenerator {
             Row opRow = sheet.createRow(rowNum++);
             opRow.createCell(0).setCellValue(formatDateTime(op.date()));
             opRow.createCell(1).setCellValue(op.operationType());
-            opRow.createCell(2).setCellValue(op.quantity());
+            opRow.createCell(2).setCellValue(op.quantity() - op.quantityRest());
             opRow.createCell(3).setCellValue(convert(getPriceFromOperation(op)).doubleValue());
             opRow.createCell(4).setCellValue(convert(Math.abs(op.payment())).doubleValue());
         }
@@ -265,35 +255,70 @@ public class ExcelReportGenerator {
     }
 
     private void createSummarySheet(Workbook workbook, Report report) {
-        Sheet sheet = workbook.createSheet("Итоговая сводка");
-        CellStyle headerStyle = createHeaderStyle(workbook);
+        Sheet sheet = workbook.createSheet("Итоговые показатели");
+        CellStyle headerStyle = createTypeHeaderStyle(workbook);
         int rowNum = 0;
 
+        int blockStartRow = rowNum;
+        Row balanceHeader = sheet.createRow(rowNum++);
+        balanceHeader.createCell(0).setCellValue("Состояние портфеля");
+        balanceHeader.getCell(0).setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(blockStartRow, blockStartRow, 0, 1));
+
+        rowNum = addSummaryRow(sheet, rowNum, "Баланс, руб",
+                report.getFinancialSummary().getCurrentCashBalance().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Рыночная стоимость портфеля, руб",
+                report.getFinancialSummary().getPortfolioAmount().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальная прибыль за всё время, руб",
+                report.getFinancialSummary().getPotentialTotalProfit().doubleValue());
+
+        int blockEndRow = rowNum - 1;
+        drawBorderAroundSummaryBlock(sheet, blockStartRow, blockEndRow, 0, 1, workbook);
+
+        rowNum++;
+
+        blockStartRow = rowNum;
         Row closedHeader = sheet.createRow(rowNum++);
         closedHeader.createCell(0).setCellValue("Закрытые сделки");
-        closedHeader.getCell(0).setCellStyle(createTypeHeaderStyle(workbook));
+        closedHeader.getCell(0).setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(blockStartRow, blockStartRow, 0, 1));
 
-        rowNum = addSummaryRow(sheet, rowNum, "Общая прибыль (руб)",
-                report.getSummary().getTotalProfit());
-        rowNum = addSummaryRow(sheet, rowNum, "Всего инвестировано (руб)",
-                report.getSummary().getTotalInvested());
+        rowNum = addSummaryRow(sheet, rowNum, "Сумма удержанных комиссий, руб",
+                report.getFinancialSummary().getClosedTradesFees().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Доход от трейдов (до НДФЛ), руб",
+                report.getFinancialSummary().getClosedTradesProfitBeforeTax().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "НДФЛ на доход от трейдов, руб", report.getFinancialSummary().getClosedTradesTax().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Прибыль от трейдов, руб", report.getFinancialSummary().getClosedTradesProfit().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Прибыль от дивидендов/купонов, руб", report.getFinancialSummary().getClosedTradesPassiveIncome().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Итоговая прибыль, руб", report.getFinancialSummary().getClosedTradesTotalProfit().doubleValue());
 
+        blockEndRow = rowNum - 1;
+        drawBorderAroundSummaryBlock(sheet, blockStartRow, blockEndRow, 0, 1, workbook);
         rowNum++;
 
+        blockStartRow = rowNum;
         Row openHeader = sheet.createRow(rowNum++);
         openHeader.createCell(0).setCellValue("Открытые позиции");
-        openHeader.getCell(0).setCellStyle(createTypeHeaderStyle(workbook));
+        openHeader.getCell(0).setCellStyle(headerStyle);
+        sheet.addMergedRegion(new CellRangeAddress(blockStartRow, blockStartRow, 0, 1));
 
-        rowNum = addSummaryRow(sheet, rowNum, "Текущая стоимость портфеля (руб)",
-                report.getSummary().getCurrentValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальные комиссий, руб",
+                report.getFinancialSummary().getOpenTradesFees().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальный доход от трейдов (до НДФЛ), руб",
+                report.getFinancialSummary().getOpenTradesProfitBeforeTax().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальная налогооблагаемая база, руб",
+                report.getFinancialSummary().getOpenTradesPotentialTaxableBase().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальный НДФЛ на доход от трейдов, руб",
+                report.getFinancialSummary().getOpenTradesPotentialTax().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальная прибыль от трейдов, руб",
+                report.getFinancialSummary().getOpenTradesPotentialProfit().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Прибыль от дивидендов/купонов, руб",
+                report.getFinancialSummary().getOpenTradesPassiveIncome().doubleValue());
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальная прибыль, руб",
+                report.getFinancialSummary().getOpenTradesTotalPotentialProfit().doubleValue());
 
-        rowNum++;
-
-        Row totalHeader = sheet.createRow(rowNum++);
-        totalHeader.createCell(0).setCellValue("Общая доходность");
-        totalHeader.getCell(0).setCellStyle(createTypeHeaderStyle(workbook));
-
-        addSummaryRow(sheet, rowNum, "Общая доходность (%)", 0);
+        blockEndRow = rowNum - 1;
+        drawBorderAroundSummaryBlock(sheet, blockStartRow, blockEndRow, 0, 1, workbook);
 
         sheet.autoSizeColumn(0);
         sheet.autoSizeColumn(1);
@@ -313,27 +338,6 @@ public class ExcelReportGenerator {
         font.setFontHeightInPoints((short) 16);
         style.setFont(font);
         style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        return style;
-    }
-
-    private CellStyle createInstrumentHeaderStyle(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        font.setFontHeightInPoints((short) 12);
-        style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        return style;
-    }
-
-    private CellStyle createSummaryStyle(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         return style;
     }
@@ -375,7 +379,7 @@ public class ExcelReportGenerator {
         return style;
     }
 
-    private CellStyle createTradeGroupHeaderStyle(Workbook workbook) {
+    private CellStyle createSecondHeaderStyle(Workbook workbook) {
         CellStyle style = createHeaderStyle(workbook);
         style.setFillForegroundColor(IndexedColors.TURQUOISE.getIndex());
         Font font = workbook.createFont();
@@ -399,10 +403,10 @@ public class ExcelReportGenerator {
                 CellStyle style = workbook.createCellStyle();
                 style.cloneStyleFrom(cell.getCellStyle());
 
-                if (r == startRow) style.setBorderTop(BorderStyle.MEDIUM);
-                if (r == endRow) style.setBorderBottom(BorderStyle.MEDIUM);
-                if (c == startCol) style.setBorderLeft(BorderStyle.MEDIUM);
-                if (c == endCol) style.setBorderRight(BorderStyle.MEDIUM);
+                if (r == startRow) style.setBorderTop(BorderStyle.THIN);
+                if (r == endRow) style.setBorderBottom(BorderStyle.THIN);
+                if (c == startCol) style.setBorderLeft(BorderStyle.THIN);
+                if (c == endCol) style.setBorderRight(BorderStyle.THIN);
 
                 cell.setCellStyle(style);
             }
@@ -426,6 +430,28 @@ public class ExcelReportGenerator {
             style.setBorderRight(BorderStyle.THIN);
 
             cell.setCellStyle(style);
+        }
+    }
+
+    private void drawBorderAroundSummaryBlock(Sheet sheet, int startRow, int endRow, int startCol, int endCol, Workbook workbook) {
+        for (int r = startRow; r <= endRow; r++) {
+            Row row = sheet.getRow(r);
+            for (int c = startCol; c <= endCol; c++) {
+                Cell cell = row.getCell(c);
+                if (cell == null) {
+                    cell = row.createCell(c);
+                }
+
+                CellStyle style = workbook.createCellStyle();
+                style.cloneStyleFrom(cell.getCellStyle());
+
+                style.setBorderTop(BorderStyle.THIN);
+                style.setBorderBottom(BorderStyle.THIN);
+                style.setBorderLeft(BorderStyle.THIN);
+                style.setBorderRight(BorderStyle.THIN);
+
+                cell.setCellStyle(style);
+            }
         }
     }
 }

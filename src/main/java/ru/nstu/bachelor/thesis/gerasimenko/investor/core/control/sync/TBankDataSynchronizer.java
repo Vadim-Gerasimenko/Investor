@@ -27,7 +27,7 @@ public class TBankDataSynchronizer {
     @PostConstruct
     public void init() {//TODO
        // syncInstruments();
-       // syncInstrumentsPrices();
+      //  syncInstrumentsPrices();
 
         taskScheduler.scheduleWithFixedDelay(
                 this::syncInstruments,

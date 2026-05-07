@@ -29,6 +29,7 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.dictionary.I
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.dictionary.Tariff;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -301,9 +302,21 @@ public class TBankApiService {
 
             response.getBody().instruments().forEach(dto -> {
                 try {
+                    final String brokenInstrumentTicker = "SU26242RMFS6";/*List.of(
+                            "dad5316e-70f6-4fb0-aca3-bcd085520a7b",
+                            "a93c7ae6-62b7-4824-adf6-f18905d28e30",
+                            "aeb87814-40bc-4d36-bf59-9242e3503a04");*/
+
+                    long priceNano = MoneyValueConverter.convert(dto.values().getFirst().value());
+                    if (brokenInstrumentTicker.equals(dto.ticker())) {
+                        // лютейший костыль :) API некорректно учитывает лотность, хотя в stream-ах выдает верные результаты
+                        // но я использую REST :((
+                        priceNano = priceNano * 10;
+                    }
+
                     instrumentsPrices.add(TBankInstrumentPrice.builder()
                             .instrumentUid(dto.instrumentUid())
-                            .price(MoneyValueConverter.convert(dto.values().getFirst().value()))
+                            .price(priceNano)
                             .recordedAt(dto.values().getFirst().time())
                             .build());
                 } catch (NoSuchElementException ignored) {

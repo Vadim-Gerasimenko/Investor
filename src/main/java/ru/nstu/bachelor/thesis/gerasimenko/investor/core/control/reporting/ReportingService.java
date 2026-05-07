@@ -193,6 +193,7 @@ public class ReportingService {
         BigDecimal avgSellPrice = totalSellQuantity > 0 ? getAverage(totalSellValue, totalSellQuantity) : BigDecimal.ZERO;
 
         BigDecimal currentPrice = convert(tBankInstrumentPriceService.getCurrentPrice(instrument.getUid()));
+
         BigDecimal currentAmount = getTotal(currentPrice, remainingQuantity);
 
         BigDecimal potentialFees = getPercent(currentAmount, instrumentFee.getPercentNano());
@@ -209,6 +210,8 @@ public class ReportingService {
 
         BigDecimal taxAdjustment = getPercent(profitFromSpeculationBeforeTax, TAX_PERCENTAGE_NANO);
 
+        BigDecimal passiveIncome = passiveIncomeBeforeTax.subtract(accruedTaxes);
+
         BigDecimal profitFromSpeculation = profitFromSpeculationBeforeTax
                 .subtract(taxAdjustment.compareTo(BigDecimal.ZERO) > 0 ? taxAdjustment : BigDecimal.ZERO);
         BigDecimal finalProfit = profitFromSpeculation.add(passiveIncomeBeforeTax.subtract(accruedTaxes));
@@ -224,6 +227,7 @@ public class ReportingService {
                 .totalSellQuantity(totalSellQuantity)
                 .remainingQuantity(remainingQuantity)
                 .passiveIncomeBeforeTax(passiveIncomeBeforeTax)
+                .passiveIncome(passiveIncome)
                 .avgBuyPrice(avgBuyPrice)
                 .avgSellPrice(avgSellPrice)
                 .otherOperationsSumNano(otherOperationsSum)
@@ -259,26 +263,82 @@ public class ReportingService {
                 .mapToLong(TBankOperation::getPaymentValue)
                 .sum());
 
+        BigDecimal closedTradesProfitBeforeTax = closedTrades.stream()
+                .map(TradeGroup::getProfitFromSpeculationBeforeTax)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closedTradesTax = closedTradesProfitBeforeTax.compareTo(BigDecimal.ZERO) > 0
+                ? getPercent(closedTradesProfitBeforeTax, TAX_PERCENTAGE_NANO)
+                : BigDecimal.ZERO;
+        BigDecimal closedTradesProfit = closedTradesProfitBeforeTax.subtract(closedTradesTax);
+
+        BigDecimal closedTradesFees = closedTrades.stream()
+                .map(TradeGroup::getAccruedFees)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closedTradesPassiveIncome = closedTrades.stream()
+                .map(TradeGroup::getPassiveIncome)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closedTradesTotalProfit = closedTradesProfit.add(closedTradesPassiveIncome);
+
         BigDecimal portfolioAmount = openTrades.stream()
                 .map(TradeGroup::getCurrentAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal potentialFees = openTrades.stream()
-                .map(TradeGroup::getPotentialFees)
+        BigDecimal openTradesFees = openTrades.stream()
+                .map(TradeGroup::getAccruedFees)
+                .reduce(BigDecimal.ZERO, BigDecimal::add).add(openTrades.stream()
+                        .map(TradeGroup::getPotentialFees)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        BigDecimal openTradesProfitBeforeTax = openTrades.stream()
+                .map(TradeGroup::getProfitFromSpeculationBeforeTax)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal potentialTaxes = openTrades.stream()
-                .map(TradeGroup::getTaxAdjustment)
+        BigDecimal openTradesPotentialTax = BigDecimal.ZERO;
+        BigDecimal openTradesPotentialTaxableBase = BigDecimal.ZERO;
+
+        if (openTradesProfitBeforeTax.compareTo(BigDecimal.ZERO) > 0) {
+            if (closedTradesProfitBeforeTax.compareTo(BigDecimal.ZERO) <= 0) {
+                openTradesPotentialTaxableBase = openTradesProfitBeforeTax.add(closedTradesProfitBeforeTax);
+            } else {
+                openTradesPotentialTaxableBase = openTradesProfitBeforeTax;
+            }
+
+            if (openTradesPotentialTaxableBase.compareTo(BigDecimal.ZERO) > 0) {
+                openTradesPotentialTax = getPercent(openTradesPotentialTaxableBase, TAX_PERCENTAGE_NANO);
+            }
+        }
+
+        BigDecimal openTradesPotentialProfit = openTradesProfitBeforeTax.subtract(openTradesPotentialTax);
+        BigDecimal openTradesPassiveIncome = openTrades.stream()
+                .map(TradeGroup::getPassiveIncome)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        BigDecimal openTradesTotalPotentialProfit = openTradesPotentialProfit.add(openTradesPassiveIncome);
 
-        //BigDecimal potentialAmountClear = portfolioAmount.subtract(potentialFees).subtract(potentialTaxes.compareTo(BigDecimal.ZERO) > 0 ? potentialTaxes : BigDecimal.ZERO);
-        //BigDecimal potentialProfitWithoutTaxes = potentialAmountClear.subtract(po)
+        BigDecimal potentialTotalProfit = closedTradesTotalProfit.add(openTradesPotentialProfit);
 
         return FinancialSummary.builder()
                 .currentCashBalance(balance)
                 .inputOperations(inputOperations)
                 .outputOperations(outputOperations)
+                .closedTradesProfitBeforeTax(closedTradesProfitBeforeTax)
+                .closedTradesTax(closedTradesTax)
+                .closedTradesProfit(closedTradesProfit)
+                .closedTradesPassiveIncome(closedTradesPassiveIncome)
+                .closedTradesTotalProfit(closedTradesTotalProfit)
+                .closedTradesFees(closedTradesFees)
+                .portfolioAmount(portfolioAmount)
+                .openTradesFees(openTradesFees)
+                .openTradesProfitBeforeTax(openTradesProfitBeforeTax)
+                .openTradesPotentialTaxableBase(openTradesPotentialTaxableBase)
+                .openTradesPotentialTax(openTradesPotentialTax)
+                .openTradesPotentialProfit(openTradesPotentialProfit)
+                .openTradesPassiveIncome(openTradesPassiveIncome)
+                .openTradesTotalPotentialProfit(openTradesTotalPotentialProfit)
+                .potentialTotalProfit(potentialTotalProfit)
                 .build();
     }
 

@@ -25,6 +25,7 @@ public class TradeGroup {
     private BigDecimal potentialAmountWithoutTax;
     private BigDecimal potentialAmount;
     private BigDecimal passiveIncomeBeforeTax;
+    private BigDecimal passiveIncome;
     private long totalBuyQuantity;
     private long totalSellQuantity;
     private BigDecimal totalBuyValue;

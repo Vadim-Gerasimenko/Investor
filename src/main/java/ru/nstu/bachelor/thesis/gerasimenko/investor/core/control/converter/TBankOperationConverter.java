@@ -9,6 +9,15 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankO
 public class TBankOperationConverter {
 
     public static OperationDto convert(TBankOperation operation) {
+        String instrumentDescription = operation.getInstrument() != null
+                ? operation.getInstrument().getInstrumentType().getDescription()
+                : "";
+
+
+        String instrumentUid = operation.getInstrument() != null
+                ? operation.getInstrument().getInstrumentType().getDescription()
+                : "";
+
         return OperationDto.builder()
                 .id(operation.getId())
                 .parentOperationId(operation.getId())
@@ -19,8 +28,8 @@ public class TBankOperationConverter {
                 .currency(operation.getCurrency())
                 .payment(operation.getPaymentValue())
                 .date(operation.getOperationDate())
-                .instrumentType(operation.getInstrument().getInstrumentType().getDescription())
-                .instrumentUid(operation.getInstrument().getUid())
+                .instrumentType(instrumentDescription)
+                .instrumentUid(instrumentUid)
                 .trades(operation.getTrades().stream().map(TBankTradeConverter::convert).toList())
                 .build();
     }
