@@ -12,9 +12,9 @@ public class RatesUrlConfig {
     @NotNull(message = "RatesUrlConfig: exactDateQueryParam is null")
     private String exactDateQueryParam;
 
-    @NotNull(message = "RatesUrlConfig: timeZone is null")
-    private String timeZone;
-
     @NotNull(message = "RatesUrlConfig: datePattern is null")
     private String datePattern;
+
+    @NotNull(message = "RatesUrlConfig: loaderCron is null")
+    private String loaderCron;
 }

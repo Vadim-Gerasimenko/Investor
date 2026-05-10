@@ -6,6 +6,9 @@ import lombok.Data;
 @Data
 public class CbrfApiConfig {
 
+    @NotNull(message = "CbrfApiConfig: timeZone is null")
+    private String timeZone;
+
     @NotNull(message = "CbrfApiConfig: rates is null")
     private RatesUrlConfig rates;
 

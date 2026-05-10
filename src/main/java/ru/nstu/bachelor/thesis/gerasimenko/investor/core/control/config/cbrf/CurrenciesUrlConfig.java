@@ -8,4 +8,7 @@ public class CurrenciesUrlConfig {
 
     @NotNull(message = "CurrenciesUrlConfig: url is null")
     private String url;
+
+    @NotNull(message = "CurrenciesUrlConfig: loaderCron is null")
+    private String loaderCron;
 }

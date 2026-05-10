@@ -77,7 +77,7 @@ public class AuthService {
                 .build());
     }
 
-    public AuthToken refreshToken(HttpServletRequest request) {
+    public AuthToken refreshTokens(HttpServletRequest request) {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION_HEADER);
 
         if (Objects.isNull(authHeader) || !authHeader.startsWith(HttpHeaders.BEARER_TOKEN)) {
@@ -85,6 +85,10 @@ public class AuthService {
         }
 
         String token = authHeader.substring(HttpHeaders.BEARER_TOKEN.length());
+        return refreshTokens(token);
+    }
+
+    public AuthToken refreshTokens(String token) {
         String email = jwtService.extractEmail(token);
         User user = userService.findByEmail(email);
 

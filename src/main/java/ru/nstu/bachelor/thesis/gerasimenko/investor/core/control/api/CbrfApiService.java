@@ -40,7 +40,7 @@ public class CbrfApiService {
         this.xmlMapper = xmlMapper;
 
         DATE_FORMATTER = DateTimeFormatter.ofPattern(cbrfApiConfig.getRates().getDatePattern());
-        ZONE_ID = ZoneId.of(cbrfApiConfig.getRates().getTimeZone());
+        ZONE_ID = ZoneId.of(cbrfApiConfig.getTimeZone());
     }
 
     public void loadRates(LocalDateTime date) {

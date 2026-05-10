@@ -302,7 +302,7 @@ public class ExcelReportGenerator {
         openHeader.getCell(0).setCellStyle(headerStyle);
         sheet.addMergedRegion(new CellRangeAddress(blockStartRow, blockStartRow, 0, 1));
 
-        rowNum = addSummaryRow(sheet, rowNum, "Потенциальные комиссий, руб",
+        rowNum = addSummaryRow(sheet, rowNum, "Потенциальные комиссии, руб",
                 report.getFinancialSummary().getOpenTradesFees().doubleValue());
         rowNum = addSummaryRow(sheet, rowNum, "Потенциальный доход от трейдов (до НДФЛ), руб",
                 report.getFinancialSummary().getOpenTradesProfitBeforeTax().doubleValue());
