@@ -1,4 +1,4 @@
-package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.config;
+package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.config.bean;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

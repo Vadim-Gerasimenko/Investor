@@ -15,7 +15,7 @@ public class TBankTradeConverter {
                 .operation(operation)
                 .tradeDate(tradeDto.dateTime())
                 .quantity(tradeDto.quantity())
-                .priceCurrency(tradeDto.price().currency())
+                .priceCurrency(tradeDto.price().currency().toUpperCase())
                 .priceValue(MoneyValueConverter.convert(tradeDto.price()))
                 .build();
     }

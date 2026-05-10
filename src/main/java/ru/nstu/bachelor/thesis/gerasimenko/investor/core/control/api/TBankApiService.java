@@ -129,7 +129,7 @@ public class TBankApiService {
                     .account(account)
                     .operationType(dictionaryCache.getOperationType(operationDto.operationType().getType()))
                     .state(dictionaryCache.getOperationState(operationDto.state().getState()))
-                    .currency(operationDto.currency())
+                    .currency(operationDto.currency().toUpperCase())
                     .paymentValue(MoneyValueConverter.convert(operationDto.payment()))
                     .quantity(operationDto.quantity())
                     .quantityRest(operationDto.quantityRest())
@@ -372,7 +372,7 @@ public class TBankApiService {
                 existing.setTicker(dto.ticker());
                 existing.setIsin(dto.isin());
                 existing.setLot(dto.lot());
-                existing.setCurrency(dto.currency());
+                existing.setCurrency(dto.currency().toUpperCase());
                 existing.setInstrumentType(instrumentType);
                 instruments.add(existing);
             } else {

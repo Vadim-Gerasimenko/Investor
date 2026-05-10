@@ -14,6 +14,12 @@ public class HttpInteractionService {
 
     private final RestClient restClient;
 
+    public <D> ResponseEntity<D> get(String uri, Class<D> responseType) {
+        return ResponseEntity.ofNullable(restClient.get().uri(uri)
+                .retrieve()
+                .body(responseType));
+    }
+
     public <S> ResponseEntity<?> post(String uri, HttpHeaders headers, S body) {
         return post(uri, headers, body, Object.class);
     }

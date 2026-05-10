@@ -16,7 +16,7 @@ public class TBankInstrumentConverter {
                 .lot(instrumentDto.lot())
                 .ticker(instrumentDto.ticker())
                 .name(instrumentDto.name())
-                .currency(instrumentDto.currency())
+                .currency(instrumentDto.currency().toUpperCase())
                 .instrumentType(instrumentType)
                 .build();
     }

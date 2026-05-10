@@ -5,6 +5,10 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class HttpUtils {
 
+    public static String getUrlWithParam(String url, String paramName, String paramValue) {
+        return String.format("%s?%s=%s",url, paramName, paramValue);
+    }
+
     public static String getUrl(String baseUrl, String endpoint) {
         return baseUrl + "/" + endpoint;
     }

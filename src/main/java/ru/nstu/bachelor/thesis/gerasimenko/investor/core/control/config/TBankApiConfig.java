@@ -1,6 +1,5 @@
 package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.config;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +27,4 @@ public class TBankApiConfig {
     private String usersServiceName;
 
     private String sandboxServiceName;
-
-    @PostConstruct
-    public void init() {
-        log.info("init configuration: TBankApiConfig=[{}]", this);
-    }
 }

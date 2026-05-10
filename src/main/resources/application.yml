@@ -9,6 +9,15 @@ investor-core:
     operations-service-name: OperationsService
     users-service-name: UsersService
     sandbox-service-name: SandboxService
+  cbrf-api:
+    rates:
+      url: https://www.cbr.ru/scripts/XML_daily.asp
+      exact-date-query-param: "date_req"
+      time-zone: "Europe/Moscow"
+      date-pattern: "dd/MM/yyyy"
+    currencies:
+      url: https://www.cbr.ru/scripts/XML_valFull.asp
+
   synchronization:
     instruments-sync-fixed-delay: 1h
     instruments-prices-fixed-delay: 1h

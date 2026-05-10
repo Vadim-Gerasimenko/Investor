@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.config.cbrf.CbrfApiConfig;
 
 @Slf4j
 @Data
@@ -21,6 +22,8 @@ public class InvestorCoreConfig {
     private boolean devMode = false;
 
     private TBankApiConfig tBankApi = new TBankApiConfig();
+
+    private CbrfApiConfig cbrfApi = new CbrfApiConfig();
 
     private SyncConfig synchronization = new SyncConfig();
 
