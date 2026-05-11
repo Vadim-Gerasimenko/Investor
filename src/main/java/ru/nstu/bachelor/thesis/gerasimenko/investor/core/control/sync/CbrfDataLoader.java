@@ -31,8 +31,8 @@ public class CbrfDataLoader {
 
     @PostConstruct
     public void init() {
-       // loadCurrencies();
-      //  loadRates();
+        loadCurrencies();
+        loadRates();
 
         taskScheduler.schedule(
                 this::loadCurrencies,

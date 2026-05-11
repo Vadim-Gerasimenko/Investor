@@ -25,9 +25,9 @@ public class TBankDataSynchronizer {
     private final InvestorCoreConfig investorCoreConfig;
 
     @PostConstruct
-    public void init() {//TODO
-       // syncInstruments();
-       //syncInstrumentsPrices();
+    public void init() {
+       syncInstruments();
+       syncInstrumentsPrices();
 
         taskScheduler.scheduleWithFixedDelay(
                 this::syncInstruments,
