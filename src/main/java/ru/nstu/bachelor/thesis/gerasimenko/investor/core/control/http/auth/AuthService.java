@@ -21,8 +21,10 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.UserProfile;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -36,6 +38,8 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authManager;
+
+    private final Map<String, Object> loginLocks = new ConcurrentHashMap<>();
 
     @Transactional
     public User register(RegisterRequestDto request) {
@@ -60,21 +64,30 @@ public class AuthService {
     }
 
     public AuthToken authenticate(LoginRequestDto request) {
-        authManager.authenticate(new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
-        User user = userService.findByEmail(request.email());
-        userService.login(user);
+        String email = request.email();
+        Object lock = loginLocks.computeIfAbsent(email, k -> new Object());
 
-        authTokenService.revokeAuthTokens(user.getId());
+        synchronized (lock) {
+            try {
+                authManager.authenticate(new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+                User user = userService.findByEmail(request.email());
+                userService.login(user);
 
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+                authTokenService.revokeAuthTokens(user.getId());
 
-        return authTokenService.createAuthToken(AuthToken.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .user(user)
-                .build());
+                String accessToken = jwtService.generateAccessToken(user);
+                String refreshToken = jwtService.generateRefreshToken(user);
+
+                return authTokenService.createAuthToken(AuthToken.builder()
+                        .accessToken(accessToken)
+                        .refreshToken(refreshToken)
+                        .user(user)
+                        .build());
+            } finally {
+                loginLocks.remove(email);
+            }
+        }
     }
 
     public AuthToken refreshTokens(HttpServletRequest request) {

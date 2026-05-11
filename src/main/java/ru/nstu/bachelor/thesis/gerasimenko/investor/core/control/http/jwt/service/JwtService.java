@@ -15,6 +15,7 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
@@ -67,7 +68,7 @@ public class JwtService {
     }
 
     private boolean isAccessTokenExpired(String token) {
-        return !extractExpiration(token).before(new Date());
+        return extractExpiration(token).before(new Date());
     }
 
     private Claims extractAllClaims(String token) {
@@ -81,13 +82,13 @@ public class JwtService {
 
     public boolean isValidAccess(String token, UserDetails user) {
         return extractEmail(token).equals(user.getUsername())
-                && isAccessTokenExpired(token)
+                && !isAccessTokenExpired(token)
                 && authTokenService.isValidAccessToken(token);
     }
 
     public boolean isValidRefresh(String token, User user) {
         return extractEmail(token).equals(user.getUsername())
-                && isAccessTokenExpired(token)
+                && !isAccessTokenExpired(token)
                 && authTokenService.isValidRefreshToken(token);
     }
 }

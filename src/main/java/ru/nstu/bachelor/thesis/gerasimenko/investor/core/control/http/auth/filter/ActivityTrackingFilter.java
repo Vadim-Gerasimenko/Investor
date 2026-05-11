@@ -31,6 +31,7 @@ public class ActivityTrackingFilter extends OncePerRequestFilter {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         chain.doFilter(request, response);
+
         if (auth != null && auth.getPrincipal() instanceof User user) {
             userService.updateLastActivity(user);
         }

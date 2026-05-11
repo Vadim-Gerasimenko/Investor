@@ -11,6 +11,10 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankActiveToken;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankToken;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,9 +24,20 @@ public class TBankTokenService {
     private final TBankActiveTokenRepository tBankActiveTokenRepository;
 
     @Transactional
-    public void addToken(User user, String tokenName, String token) {
+    public TBankToken addToken(User user, String tokenName, String token) {
         TBankToken tBankToken = new TBankToken(user, tokenName, token);
         tBankTokenRepository.save(tBankToken);
+        return tBankToken;
+    }
+
+    @Transactional
+    public void removeToken(User user, String tokenName) {
+        tBankTokenRepository.findByUserAndTokenName(user, tokenName)
+                .ifPresent(tBankTokenRepository::delete);
+    }
+
+    public List<TBankToken> getAllTokens(User user) {
+        return tBankTokenRepository.findAllByUser(user);
     }
 
     public TBankToken getActiveToken(User user) {
@@ -31,14 +46,19 @@ public class TBankTokenService {
                 .getToken();
     }
 
+    public String getActiveTokenName(User user) {
+        return getActiveToken(user).getTokenName();
+    }
+
     private TBankToken getTokenByName(User user, String tokenName) {
         return tBankTokenRepository.findByUserAndTokenName(user, tokenName).orElseThrow(() -> new InvestorCoreException(
                 String.format("T-Bank token with specified name not found: tokenName=[%s]", tokenName)));
     }
 
     @Transactional
-    public void activateToken(User user, String tokenName) {
+    public TBankToken activateToken(User user, String tokenName) {
         TBankToken token = getTokenByName(user, tokenName);
         tBankActiveTokenRepository.upsert(user.getId(), token.getId());
+        return token;
     }
 }

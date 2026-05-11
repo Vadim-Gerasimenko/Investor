@@ -1,4 +1,4 @@
-package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.reporting;
+package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.report;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,7 +66,7 @@ public class ExcelReportGenerator {
 
     public static final String[] BALANCE_OPERATION_HEADERS = new String[]{"Дата", "Сумма, руб"};
 
-    public byte[] generateExcelReport(Report report) {
+    public ExcelReport generateExcelReport(Report report) {
         log.info("to generate excel report");
 
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -85,8 +85,9 @@ public class ExcelReportGenerator {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
 
-            log.info("from generate excel report");
-            return outputStream.toByteArray();
+            String fileName = String.format("report_%s.xlsx", LocalDateTime.now().format(DATE_FORMATTER));
+            log.info("from generate excel report: fileName=[{}]", fileName);
+            return new ExcelReport(fileName, outputStream.toByteArray());
         } catch (IOException e) {
             log.error("Failed to generate Excel report", e);
             throw new RuntimeException("Failed to generate Excel report", e);

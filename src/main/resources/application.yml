@@ -24,7 +24,7 @@ investor-core:
       - "http://localhost:5173"
   synchronization:
     instruments-sync-fixed-delay: 1h
-    instruments-prices-fixed-delay: 1m
+    instruments-prices-fixed-delay: 1h
     dictionary-refresh-fixed-delay: 1h
     account-sync-max-delay: 2m
 

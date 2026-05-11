@@ -12,4 +12,6 @@ import java.util.Optional;
 public interface TBankTokenRepository extends JpaRepository<TBankToken, Long> {
 
     Optional<TBankToken> findByUserAndTokenName(User user, String tokenName);
+
+    List<TBankToken> findAllByUser(User user);
 }

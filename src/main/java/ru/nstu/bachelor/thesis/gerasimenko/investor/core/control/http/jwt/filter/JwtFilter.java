@@ -66,7 +66,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
-        log.info("from jwt auth filter"); //TODO: check this
+        log.info("from jwt auth filter");
         filterChain.doFilter(request, response);
     }
 }

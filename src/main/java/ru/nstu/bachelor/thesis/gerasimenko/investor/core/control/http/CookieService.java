@@ -25,7 +25,7 @@ public class CookieService {
                 .secure(!config.isDevMode())
                 .path("/api/auth")
                 .maxAge(Duration.ofMillis(refreshTokenExpiration))
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
     }
 
@@ -35,7 +35,7 @@ public class CookieService {
                 .secure(!config.isDevMode())
                 .path("/api/auth")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
     }
 }

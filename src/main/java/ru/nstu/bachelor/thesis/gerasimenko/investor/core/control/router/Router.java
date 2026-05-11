@@ -1,4 +1,4 @@
-package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.routing;
+package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.router;
 
 import org.springframework.stereotype.Component;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.config.InvestorCoreConfig;

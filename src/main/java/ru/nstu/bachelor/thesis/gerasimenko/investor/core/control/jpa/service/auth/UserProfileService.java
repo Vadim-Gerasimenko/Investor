@@ -1,5 +1,6 @@
 package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.auth;
 
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.dto.network.UserProfileDto;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.UserProfile;
 
 public interface UserProfileService {
@@ -8,5 +9,5 @@ public interface UserProfileService {
 
     UserProfile create(UserProfile userProfile);
 
-    UserProfile update(UserProfile userProfile);
+    UserProfile update(UserProfile userProfile, UserProfileDto profileDto);
 }

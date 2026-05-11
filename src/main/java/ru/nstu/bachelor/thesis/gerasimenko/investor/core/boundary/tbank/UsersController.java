@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.auth.TBankTokenService;
-import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.routing.Router;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.router.Router;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.http.HttpInteractionService;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.utils.HttpUtils;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.dto.network.HttpHeaders;

@@ -3,13 +3,17 @@ package ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.dto.network;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
 @Builder
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserProfileDto {
 
     @NotBlank

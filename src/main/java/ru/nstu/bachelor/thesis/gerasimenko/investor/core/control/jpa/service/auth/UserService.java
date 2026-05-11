@@ -1,7 +1,9 @@
 package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.service.auth;
 
 import org.springframework.security.core.userdetails.UserDetailsService;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.dto.network.UserProfileDto;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.UserProfile;
 
 public interface UserService extends UserDetailsService {
 

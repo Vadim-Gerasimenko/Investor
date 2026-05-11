@@ -1,4 +1,4 @@
-package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.reporting;
+package ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.report;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +22,7 @@ import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.tbank.TBankO
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static java.util.Arrays.stream;
@@ -46,9 +47,11 @@ public class ReportingService {
     private static final String FEE = "FEE";
     private static final String TAX = "TAX";
     private static final long TAX_PERCENTAGE_NANO = 13 * ONE_TO_NANO;
+    public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss");
+
 
     @Transactional(readOnly = true)
-    public byte[] getExcelReport(User user) {
+    public ExcelReport getExcelReport(User user) {
         Report report = getReport(user);
         return excelReportGenerator.generateExcelReport(report);
     }

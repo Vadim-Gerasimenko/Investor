@@ -5,8 +5,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.exception.UserNotFoundException;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.control.jpa.repo.auth.UserRepository;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.dto.network.UserProfileDto;
 import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.User;
+import ru.nstu.bachelor.thesis.gerasimenko.investor.core.entity.jpa.auth.UserProfile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
