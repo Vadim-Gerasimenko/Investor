@@ -23,4 +23,8 @@
         <sqlFile path="db/changelog/sql/004_create_system_user.sql"
                  relativeToChangelogFile="false"/>
     </changeSet>
+    <changeSet id="005" author="gerasimenko">
+        <sqlFile path="db/changelog/sql/005_create_rates.sql"
+                 relativeToChangelogFile="false"/>
+    </changeSet>
 </databaseChangeLog>

@@ -37,5 +37,5 @@ CREATE TABLE IF NOT EXISTS cbrf.rates
 COMMENT ON TABLE cbrf.rates IS 'Курсы валюты';
 COMMENT ON COLUMN cbrf.rates.currency_from IS 'Трехзначный буквенный код валюты, из которой происходит конвертация';
 COMMENT ON COLUMN cbrf.rates.currency_to IS 'Трехзначный буквенный код валюты, в которую происходит конвертация';
-COMMENT ON COLUMN cbrf.rates.rate IS 'Курс валюты';
+COMMENT ON COLUMN cbrf.rates.rate_nano IS 'Курс валюты';
 COMMENT ON COLUMN cbrf.rates.start_date IS 'Дата старта действия курса';
