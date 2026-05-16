@@ -1,78 +1,78 @@
-investor-core:
-  dev-mode: true
-  system-user-email: ${SYSTEM_USER_EMAIL}
-  t-bank-api:
-    base-url: https://invest-public-api.tbank.ru/rest
-    contract-version: tinkoff.public.invest.api.contract.v1
-    instruments-service-name: InstrumentsService
-    market-data-service-name: MarketDataService
-    operations-service-name: OperationsService
-    users-service-name: UsersService
-    sandbox-service-name: SandboxService
-  cbrf-api:
-    time-zone: "Europe/Moscow"
-    currencies:
-      url: https://www.cbr.ru/scripts/XML_valFull.asp
-      loader-cron: "0 0 17 * * ?"
-    rates:
-      url: https://www.cbr.ru/scripts/XML_daily.asp
-      exact-date-query-param: "date_req"
-      date-pattern: "dd/MM/yyyy"
-      loader-cron: "0 1 17 * * ?"
-  cors:
-    allowed-origins:
+investor-core: # настройки параметров бизнес-части приложения
+  dev-mode: true # режим разработки, открывающий дополнительные эндпоинты
+  system-user-email: ${SYSTEM_USER_EMAIL} # подставляемый из окружения адрес почты системного пользователя
+  t-bank-api: # параметры для обращения к REST API «Т-Инвестиций»
+    base-url: https://invest-public-api.tbank.ru/rest # базовый адрес к REST API Т-Инвестиций (промышленный контур или песочница)
+    contract-version: tinkoff.public.invest.api.contract.v1 # версия контракта API
+    instruments-service-name: InstrumentsService # название сервиса с информацией об инструментах
+    market-data-service-name: MarketDataService # название сервиса с информацией о торговых данных
+    operations-service-name: OperationsService # название сервиса с информацией об операциях
+    users-service-name: UsersService # название сервиса с информацией о данных пользователя
+    sandbox-service-name: SandboxService  # название сервиса-песочницы
+  cbrf-api: # параметры для обращения к файловому API «Банка России»
+    time-zone: "Europe/Moscow" # временная зона устанавливаемого времени выполнения задач
+    currencies: # параметры для настройки задачи загрузки справочника валют
+      url: https://www.cbr.ru/scripts/XML_valFull.asp # адрес для получения справочника валют
+      loader-cron: "0 0 17 * * ?" # CRON-выражение для определения времени запуска задачи загрузки справочника валют
+    rates: # параметры для настройки задачи загрузки курсов валют
+      url: https://www.cbr.ru/scripts/XML_daily.asp # адрес для получения курсов валют
+      exact-date-query-param: "date_req" # название параметра запроса, для получения данных на указанную дату
+      date-pattern: "dd/MM/yyyy" # шаблон даты, передаваемой в параметр запроса
+      loader-cron: "0 1 17 * * ?"  # CRON-выражение для определения времени запуска задачи загрузки курсов валют
+  cors: # настройка политики Cross-Origin Resource Sharing
+    allowed-origins: # допустимые домены
       - "http://localhost:5173"
-  synchronization:
-    instruments-sync-fixed-delay: 1h
-    instruments-prices-fixed-delay: 1h
-    dictionary-refresh-fixed-delay: 1h
-    account-sync-max-delay: 2m
+  synchronization: # описание временных промежутков синхронизации
+    instruments-sync-fixed-delay: 1h # фиксированное время перезапуска задачи синхронизации инструментов
+    instruments-prices-fixed-delay: 1m # фиксированное время перезапуска задачи синхронизации рыночных цен инструментов
+    dictionary-refresh-fixed-delay: 1h # фиксированное время перезагрузки кэша константных данных из схемы «dictionary»
+    account-sync-max-delay: 2m # максимальное время, по достижении которого допустимо синхронизировать данные о счёте пользователя
 
-scheduler:
-  pool-size: 10
-  termination-seconds: 60
-  async-pool-size: 5
-  thread-name-prefix: "data-sync-thread-"
-  async-thread-name-prefix: "async-worker-"
+scheduler: # настройки планировщиков задач
+  pool-size: 10 # размер пула потоков основного планировщика
+  termination-seconds: 60 # время ожидания завершения запущенных фоновых задач перед остановкой работы сервиса (в секундах)
+  async-pool-size: 5 # размер пула потоков дополнительного исполнителя асинхронных задач
+  thread-name-prefix: "data-sync-thread-" # шаблон именования потоков основного планировщика (для логирования)
+  async-thread-name-prefix: "async-worker-" # шаблон именования потоков дополнительного исполнителя (для логирования)
 
-server:
-  port: 9095
+server: # Настройки веб-сервера
+  port: 9095 # Порт, на котором будет поднят веб-сервер
 
-logging:
+logging: # Настройки логирования
   file:
-    name: distr/conf/logback.xml
+    name: distr/conf/logback.xml  # Относительный путь к файлу с настройкой логирования
   level:
-    ru.nstu.bachelor: info
+    ru.nstu.bachelor: info # Уровень логирования, начиная с которого логи будут записываться в файл/консоль
 
-spring:
+spring: # Системные настройки для Spring Framework
   main:
-    banner-mode: off
+    banner-mode: off # настройка отображения баннера Spring Framework
   application:
-    name: InvestorCore
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    open-in-view: false
+    name: InvestorCore # Название приложения
+  datasource: # параметры для подключения к базе данных
+    url: ${DB_URL} # подставляемый из окружения адрес базы данных
+    username: ${DB_USERNAME} # подставляемое из окружения имя пользователя
+    password: ${DB_PASSWORD} # подставляемый из окружения пароль пользователя
+    driver-class-name: org.postgresql.Driver # драйвер для PostgreSQL
+  jpa: # настройки общения с базой данных
+    open-in-view: false # настройка удержания сессии с базой данных
     hibernate:
-      ddl-auto: none
+      ddl-auto: none # настройка, позволяющая автоматически создавать таблицы базы данных на основе описанных в коде сущностей
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  liquibase:
-    enabled: true
-    change-log: db/changelog/changelog.xml
-    default-schema: tbank
-    liquibase-schema: liquibase
-    parameters:
-      SYSTEM_USER_EMAIL: ${SYSTEM_USER_EMAIL}
-      SYSTEM_USER_PASSWORD: ${SYSTEM_USER_PASSWORD}
-      TBANK_SYSTEM_TOKEN: ${TBANK_SYSTEM_TOKEN}
+        dialect: org.hibernate.dialect.PostgreSQLDialect # диалект PostgreSQL
+  liquibase: # настройки библиотеки для миграций базы данных
+    enabled: true # разрешение автоматического исполнения миграций при старте приложения
+    change-log: db/changelog/changelog.xml # файл, в котором зарегистрированы миграции базы данных
+    default-schema: tbank # схема базы данных по умолчанию
+    liquibase-schema: liquibase # схема, в которую попадут данные об исполнении миграций
+    parameters: # параметры, передаваемые в скрипты миграций (используется для создания системного пользователя)
+      SYSTEM_USER_EMAIL: ${SYSTEM_USER_EMAIL} # подставляемый из окружения адрес почты системного пользователя
+      SYSTEM_USER_PASSWORD: ${SYSTEM_USER_PASSWORD} # подставляемый из окружения пароль системного пользователя
+      TBANK_SYSTEM_TOKEN: ${TBANK_SYSTEM_TOKEN}  # подставляемый из окружения токен «Т-Инвестиций» системного пользователя
 
-security:
-  jwt:
-    secret-key: ${JWT_SECRET_KEY}
-    access-token-expiration: 36000000 # 10 hours
-    refresh-token-expiration: 252000000 # 7 days
+security: # настройки параметров безопасности
+  jwt: # настройка jwt-токенов для авторизации
+    secret-key: ${JWT_SECRET_KEY} # подставляемый из окружения секретный ключ для генерации jwt-токена
+    access-token-expiration: 36000000 # 10 hours # время жизни токена доступа в миллисекундах
+    refresh-token-expiration: 252000000 # 7 days # время жизни токена обновления в миллисекундах
